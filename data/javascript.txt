@@ -1,0 +1,662 @@
+moment = this.moment;
+delete this.moment;
+var logger = require('./logger');
+var Storage = exports.Storage = function Storage()
+{
+};
+Storage.get = function (uri)
+{
+  var Storage;
+  var storageProtocol = ""+uri.match(/^[a-z]+/i);
+  switch (storageProtocol) {
+  case 'mongodb':
+    try {
+      Storage = require('./db/mongo/storage').Storage;
+      return new Storage(uri);
+    } catch (e) {
+      logger.error("MongoDB " + e);
+      throw new Error("Could not instantiate MongoDB backend");
+    }
+  case 'kyoto':
+    try {
+      Storage = require('./db/kyoto/storage').Storage;
+      return new Storage(uri);
+    } catch (e) {
+      logger.error("KyotoCabinet " + e);
+      throw new Error("Could not instantiate KyotoCabinet backend");
+    }
+  case 'leveldb':
+    try {
+      Storage = require('./db/leveldb/storage').Storage;
+      return new Storage(uri);
+    } catch (e) {
+      logger.error("LevelDB " + e);
+      throw new Error("Could not instantiate LevelDB (LevelDOWN) backend");
+    }
+  case 'levelup':
+    try {
+      Storage = require('./db/leveldown/storage').Storage;
+      return new Storage(uri);
+    } catch (e) {
+      logger.error("LevelDB " + e);
+      throw new Error("Could not instantiate LevelDB (LevelUP) backend");
+    }
+  default:
+    throw new Error('Unknown storage protocol "'+storageProtocol+'"');
+  }
+};
+var assert = require('assert');
+var R = require('..');
+describe('times', function() {
+  it('takes a map func', function() {
+    assert.deepEqual(R.times(R.identity, 5), [0, 1, 2, 3, 4]);
+    assert.deepEqual(R.times(function(x) {
+      return x * 2;
+    }, 5), [0, 2, 4, 6, 8]);
+  });
+  it('is curried', function() {
+    var mapid = R.times(R.identity);
+    assert.deepEqual(mapid(5), [0, 1, 2, 3, 4]);
+  });
+  it('throws if second argument is not a valid array length', function() {
+    assert.throws(function() { R.times(3)('cheers!'); }, RangeError);
+    assert.throws(function() { R.times(R.identity, -1); }, RangeError);
+  });
+});
+"use strict";
+module.exports = function(grunt) {
+  grunt.initConfig({
+    pkg: '<json:package.json>',
+    meta: {
+      banner: '
+'
+    },
+    lint: {
+      files: ['app.js', 'grunt.js', 'server
+*.js', 'test
+*.js', 'public/js
+*.js',
+        options : {
+          globals : ['should'],
+          timeout : 3000,
+          ignoreLeaks : false,
+          ui : 'bdd',
+          reporter : 'spec',
+          recursive: true
+        }
+      }
+    },
+    watch: {
+      files: '<config:lint.files>',
+      tasks: 'lint'
+    },
+    jshint: {
+      options: {
+        curly: true,
+        eqeqeq: true,
+        immed: true,
+        latedef: true,
+        newcap: true,
+        noarg: true,
+        sub: true,
+        undef: true,
+        trailing: true,
+        browser: true,
+        node : true,
+        es5 : true,
+        laxcomma : true,
+        strict: true,
+        expr: true
+      },
+      globals: {
+        jQuery: true,
+        it : true,
+        beforeEach : true,
+        after: true,
+        describe: true,
+        angular: true,
+        RegisterCtrl: true,
+        LoginCtrl: true,
+        ModalCtrl: true,
+        $location: true,
+        $: true
+      }
+    },
+    uglify: {}
+  });
+  grunt.loadNpmTasks('grunt-simple-mocha');
+  grunt.registerTask('default', 'lint simplemocha');
+};
+var number_pool = [];
+function makeFloatingNumber(x, y, color, text) {
+  var txt;
+  if(number_pool.length > 0) {
+    txt = number_pool[number_pool.length-1];
+    number_pool.pop();
+  } else {
+    txt = Crafty.e("FloatingNumber");
+  }
+  txt.attr({ 'x': x, 'y':y })
+    .color(color)
+    .text(text);
+  txt.lifetime = 30;
+  var interval = setInterval(function() {
+    txt.y -= 1;
+    if(txt.lifetime-- <= 0) {
+      number_pool.push(txt);
+      txt.x = -10000;
+      txt.y = -10000;
+      clearInterval(interval);
+    }
+  }, 30);
+  return txt;
+}
+exports.createRPGComponents = function(level) {
+  Crafty.c("FloatingNumber", {
+    init : function() {
+      this.addComponent("2D, DOM, Text, Color");
+    }
+  })
+  Crafty.c("RPG", {
+    _hp     : 10,
+    _max_hp : 10,
+    _xp     : 10,
+    _level  : 0,
+    _alive  : true,
+    init : function() {
+      this.bind("TakeDamage", function(args) {
+        this._hp -= args.damage;
+        makeFloatingNumber(this.x + this.w/2, this.y, "#ff0000", "" + args.damage);
+      });
+      this.bind("GainXP", function(args) {
+        this._xp += args.xp;
+        makeFloatingNumber(this.x + this.w/2, this.y, "#00ff00", "+" + args.value + "xp");
+      });
+      this.bind("GainLevel", function(args) {
+        this._xp += args.xp;
+        makeFloatingNumber(this.x + this.w/2, this.y, "#00ffff", "Level Up!");
+      });
+    },
+  });
+  Crafty.c("Corpse", {
+    init : function() {
+      this.addComponent("2D, Canvas, Tween");
+      this.attr({alpha: 1.0});
+      this.tween({alpha: 0.0}, 200);
+      var corpse = this;
+      this.bind("TweenEnd", function() {
+        corpse.destroy();
+      });
+    }
+  });
+};
+exports.makeFloatingNumber = makeFloatingNumber;
+var CK_API_HOST = 'https:
+var app = angular.module('cc-example-module', ['mgcrea.ngStrap', 'ngResource' ]);
+app.controller('mainController', function($scope, $resource) {
+    $scope.busy = true;
+    $scope.rates = {};
+    $scope.reload_rates = function() {
+      $scope.rates = {};
+      $scope.busy = true;
+      $resource(CK_API_HOST + '/public/rates').get(function(d) {
+          $scope.rates = d.rates;
+          $scope.info = d.currencies;
+          $scope.all_codes = _.keys(d.currencies);
+          $scope.crypto_codes = _.sortBy(_.keys(d.rates),
+                                    function(k) { return d.currencies[k].rank;});
+          $scope.fiat_codes = _.sortBy(_.difference($scope.all_codes, $scope.crypto_codes, ['XTN']),
+                                    function(k) { return d.currencies[k].rank;});
+          $scope.busy = false;
+      });
+    }
+    $scope.reload_rates();
+});
+app.factory('myInterceptor', ['$log', function($log) {
+    var myInterceptor = {
+       'request': function(config) {
+            $log.debug("HTTP Request " + config.url, config);
+            return config;
+        },
+        'response': function(response) {
+            $log.debug("HTTP Response: ", response);
+            return response;
+        },
+        'responseError': function(response) {
+            $log.debug("HTTP Response (Error): ", response);
+			if(!response.data) {
+				response.data = '{"error":"HTTP Error ' + response.status + '"}';
+			}
+            return response;
+        }
+    };
+    return myInterceptor;
+}]);
+app.config(['$httpProvider', function($httpProvider) {
+    $httpProvider.interceptors.push('myInterceptor');
+}]);
+var get = Ember.get, set = Ember.set;
+Ember.Application.reopen({
+  ready: function() {
+    var store = this.router.store;
+    store._initialize();
+    this._super();
+  }
+});
+Ember.onLoad('Ember.Application', function(Application) {
+  Ember.Application.registerInjection({
+    name: "setupSynchronizedStore",
+    after: ['store'],
+    injection: function(app, stateManager, property) {
+      if (!stateManager) { return; }
+      if (property === 'Store') {
+        var store = get(stateManager, 'store');
+        if (!store) { return; }
+        var revision = store.revision;
+        var mappings = get(store, 'adapter.mappings');
+        Ember.assert("Currently you need to provide mappings of JSON keys to modelTypes (e.g., persons: App.Person)." +
+          "But your adapter's mappings property is null.", !!mappings);
+        var serverAdapter = DS._ServerAdapter.create({
+          mappings: mappings
+        });
+        var serverStore = DS._ServerStore.create({
+          adapter: serverAdapter,
+          revision: revision,
+          clientStore: store
+        });
+        set(store, 'serverStore', serverStore);
+      } 
+    }
+  });
+});
+define('crm/Views/ErrorLog/List', [
+    'dojo/_base/declare',
+    'dojo/_base/lang',
+    'dojo/store/Memory',
+    'crm/Format',
+    'argos/Convert',
+    'argos/ErrorManager',
+    'argos/List'
+], function(
+    declare,
+    lang,
+    Memory,
+    format,
+    convert,
+    ErrorManager,
+    List
+) {
+    var __class = declare('crm.Views.ErrorLog.List', [List], {
+        titleText: 'Error Logs',
+        errorDateFormatText: 'MM/DD/YYYY hh:mm A',
+        itemTemplate: new Simplate([
+            '<h3>{%: crm.Format.date($.Date, $$.errorDateFormatText) %}</h3>',
+            '<h4>{%: $.Description %}</h4>'
+        ]),
+        id: 'errorlog_list',
+        enableSearch: false,
+        enablePullToRefresh: false,
+        hideSearch: true,
+        expose: false,
+        detailView: 'errorlog_detail',
+        _onRefresh: function(o) {
+            this.inherited(arguments);
+            if (o.resourceKind === 'errorlogs' || o.resourceKind === 'localStorage') {
+                this.refreshRequired = true;
+            }
+        },
+        createStore: function() {
+            var errorItems = ErrorManager.getAllErrors();
+            errorItems.sort(function(a, b) {
+                a.errorDateStamp = a.errorDateStamp || a['Date'];
+                b.errorDateStamp = b.errorDateStamp || b['Date'];
+                a['Date'] = a.errorDateStamp;
+                b['Date'] = b.errorDateStamp;
+                var A = convert.toDateFromString(a.errorDateStamp),
+                    B = convert.toDateFromString(b.errorDateStamp);
+                return A.valueOf() > B.valueOf();
+            });
+            return new Memory({data: errorItems});
+        },
+        createToolLayout: function() {
+            return this.tools || (this.tools = {
+                'tbar': []
+            });
+        }
+    });
+    lang.setObject('Mobile.SalesLogix.Views.ErrorLog.List', __class);
+    return __class;
+});
+define(["../walletmanager", "./abstractwallet"], function (WalletManager, AbstractWallet) {
+  var MiniWallet = function (data) {
+    AbstractWallet.apply(this, arguments);
+    this.type = 'mini';
+    this.wallet = new Bitcoin.Wallet();
+    if (data) {
+      if (data.keys) {
+        var keys = data.keys.split(',');
+        var pubs = data.pubs ? data.pubs.split(',') : [];
+        if (Array.isArray(pubs) && pubs.length == keys.length) {
+          this.wallet.addKeys(keys, pubs);
+        } else {
+          this.wallet.addKeys(keys);
+        }
+      }
+    }
+    if (this.wallet.getLength() == 0) {
+      this.wallet.generateAddress();
+    }
+  };
+  MiniWallet.humanName = "Mini Wallet";
+  MiniWallet.humanDesc = "Very simple wallet where your keys are stored locally in your browser";
+  MiniWallet.prototype.serialize = function () {
+    var data = AbstractWallet.prototype.serialize.apply(this, arguments);
+    data.type = 'mini';
+    data.keys = this.wallet.getKeys().join(',');
+    data.pubs = this.wallet.getPubKeys().join(',');
+    return data;
+  };
+  WalletManager.reg('mini', MiniWallet);
+  return MiniWallet;
+});
+( function(Dataflow) {
+  var KeyBinding = Dataflow.prototype.plugin("keybinding");
+  var Edit = Dataflow.prototype.plugin("edit");
+  var Search = Dataflow.prototype.plugin("search");
+  KeyBinding.initialize = function(dataflow){
+    function zoomIn() {
+      if (dataflow && dataflow.currentGraph && dataflow.currentGraph.view) {
+        dataflow.currentGraph.view.zoomIn();
+      }
+    }
+    function zoomOut() {
+      if (dataflow && dataflow.currentGraph && dataflow.currentGraph.view) {
+        dataflow.currentGraph.view.zoomOut();
+      }
+    }
+    function zoomCenter() {
+      if (dataflow && dataflow.currentGraph && dataflow.currentGraph.view) {
+        dataflow.currentGraph.view.zoomCenter();
+      }
+    }
+    function keyDown(event) {
+      if (event.target.tagName==="TEXTAREA" || 
+          event.target.tagName==="INPUT" || 
+          event.target.contentEditable==="true" ){ return; }
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.which) {
+          case 189: 
+            event.preventDefault();
+            zoomIn();
+            break;
+          case 187: 
+            event.preventDefault();
+            zoomOut();
+            break;
+          case 48:
+            event.preventDefault();
+            zoomCenter();
+            break;
+          case 65: 
+            Edit.selectAll();
+            break;
+          case 88: 
+            Edit.cut();
+            break;
+          case 67: 
+            Edit.copy();
+            break;
+          case 86: 
+            Edit.paste();
+            break;
+          case 90: 
+            break;
+          case 83: 
+            event.preventDefault();
+            Search.focus();
+            break;
+          default:
+            break;
+        }
+      }
+    }
+    KeyBinding.listeners = function(boo){
+      if (boo) {
+        $(document).on('keydown', keyDown);
+      } else {
+        $(document).off('keydown', keyDown);
+      }
+    };
+    KeyBinding.listeners(true);
+  };
+}(Dataflow) );
+define('templates/helpers/dateConverter', ['handlebars', 'utils'], function (Handlebars, Utils) {
+    var dateConverter = function (item, options) {
+        return Utils.getReadableDate(item);
+    };
+    Handlebars.registerHelper('dateConverter', dateConverter);
+    return dateConverter;
+});
+(function(Handsontable){
+  var PasswordEditor = Handsontable.editors.TextEditor.prototype.extend();
+  PasswordEditor.prototype.createElements = function () {
+    Handsontable.editors.TextEditor.prototype.createElements.apply(this, arguments);
+    this.TEXTAREA = document.createElement('input');
+    this.TEXTAREA.setAttribute('type', 'password');
+    this.TEXTAREA.className = 'handsontableInput';
+    this.textareaStyle = this.TEXTAREA.style;
+    this.textareaStyle.width = 0;
+    this.textareaStyle.height = 0;
+    Handsontable.Dom.empty(this.TEXTAREA_PARENT);
+    this.TEXTAREA_PARENT.appendChild(this.TEXTAREA);
+  };
+  Handsontable.editors.PasswordEditor = PasswordEditor;
+  Handsontable.editors.registerEditor('password', PasswordEditor);
+})(Handsontable);
+var HTTPTransport = require('./http');
+exports = module.exports = HTMLFile;
+function HTMLFile (mng, data, req) {
+  HTTPTransport.call(this, mng, data, req);
+};
+HTMLFile.prototype.__proto__ = HTTPTransport.prototype;
+HTMLFile.prototype.name = 'htmlfile';
+HTMLFile.prototype.handleRequest = function (req) {
+  HTTPTransport.prototype.handleRequest.call(this, req);
+  if (req.method == 'GET') {
+    req.res.writeHead(200, {
+        'Content-Type': 'text/html; charset=UTF-8'
+      , 'Connection': 'keep-alive'
+      , 'Transfer-Encoding': 'chunked'
+    });
+    req.res.write(
+        '<html><body>'
+      + '<script>var _ = function (msg) { parent.s._(msg, document); };</script>'
+      + new Array(174).join(' ')
+    );
+  }
+};
+HTMLFile.prototype.write = function (data) {
+  data = '<script>_(' + JSON.stringify(data).replace(/\
+  if (this.response.write(data)) {
+    this.drained = true;
+  }
+  this.log.debug(this.name + ' writing', data);
+};
+export default Ember.Handlebars.makeBoundHelper(function(number, options) {
+  if (!number) {
+    return "";
+  }
+  if (options.hash.format) {
+    return numeral(number).format(options.hash.format);
+  } else {
+    return numeral(number).format();
+  }
+});
+module.exports = {
+    getMeta: function(meta) {
+        return {
+            title: meta['html-title']
+        };
+    },
+    lowestPriority: true
+};
+(function () {
+  "use strict";
+  var entryTransformer = angular.module('entry-transformer', []);
+  entryTransformer.factory('entryTransformer', function () {
+    var supportedProperties = {
+      Title: {isProtected: false},
+      URL: {isProtected: false},
+      UserName: {isProtected: false},
+      Password: {isProtected: true},
+      Notes: {isProtected: false}
+    };
+    var getValueFromKdbxEntry = function (hit, key) {
+      if (supportedProperties[key].isProtected) {
+        return hit.Value._;
+      }
+      else {
+        return hit.Value;
+      }
+    };
+    var fromKdbxEntry = function (kdbxEntry) {
+      var entry = {
+        UUID: kdbxEntry.UUID
+      };
+      _.each(supportedProperties, function (value, key) {
+        var hit = _.findWhere(kdbxEntry.String, {Key: key});
+        if (hit) {
+          entry[key] = getValueFromKdbxEntry(hit, key);
+        }
+      });
+      return entry;
+    };
+    var newProtectedEntry = function (key, value) {
+      return {
+        Key: key,
+        Value: {
+          "_": value,
+          "$": {
+            Protected: "True"
+          }
+        }
+      };
+    };
+    var fromFlatEntry = function (entry) {
+      var kdbxEntry = {
+        UUID: entry.UUID,
+        String: []
+      };
+      _.each(supportedProperties, function (value, key) {
+        if (entry[key]) {
+          if (value.isProtected) {
+            kdbxEntry.String.push(newProtectedEntry(key, entry[key]));
+          }
+          else {
+            kdbxEntry.String.push({Key: key, Value: entry[key]});
+          }
+        }
+      });
+      return kdbxEntry;
+    };
+    return {
+      fromKdbxEntry: fromKdbxEntry,
+      fromFlatEntry: fromFlatEntry
+    };
+  });
+}());
+function Player(id,name){
+    this.id = id;
+    this.name = name;
+    this.score = 0;
+    this.totalKills = 0;
+    this.totalMisses = 0;
+    this.shotsTaken = 0;
+    this.levelStats = [];
+    this.weapon = null;
+}
+Player.prototype.getScore = function(){
+    return this._formatScore(this.score.toString());
+};
+Player.prototype.updateScore = function(delta){
+    this.score+=delta;
+    $("#scoreboard").html(this.getScore());
+};
+Player.prototype.setWeapon = function(weapon){
+    this.weapon = weapon;
+};
+Player.prototype.getWeapon = function(){
+    return this.weapon;
+};
+Player.prototype.pushLevelStats = function(stats){
+    this.levelStats.push(stats);
+};
+Player.prototype._formatScore = function(nStr){
+    nStr += '';
+    x = nStr.split('.');
+    x1 = x[0];
+    x2 = x.length > 1 ? '.' + x[1] : '';
+    var rgx = /(\d+)(\d{3})/;
+    while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, '$1' + ',' + '$2');
+    }
+    return x1 + x2;
+};
+var request = require('request');
+var userUrl = process.env.USER_URL || 'http:
+module.exports = function (app) {
+  app.route('/db/*', function (req, res) {
+    if (/^\/db\/_utils/.test(req.url)) { res.json({message: 'No Access to futon!'}, 500); }
+    console.log(req.method + ' : ' + req.url);
+    var method = req.method.toLowerCase();
+    if (method === 'delete') method = 'del';
+    var path = req.url.replace('/db', '');
+    req.pipe(request[method](userUrl + path, { json: true }, function (e, r, b) {
+      if (e) {
+        console.log('Error: ' + e.message);
+        return res.json({message: e.message}, 500);
+      }
+      console.log(r.statusCode + ' : ' + JSON.stringify(b));
+      res.json(b, r.statusCode);
+    }));
+  });
+  return app;
+};
+(function(){
+    var Ockley = namespace("Ockley");
+    if (this.Backbone === 'undefined' ||  this.jQuery === 'undefined'){
+        throw new Error('Backbone and jQuery are required!');
+    }
+    Ockley.Toolbar = Backbone.View.extend({
+        toolBar: null,
+        initialize: function() {
+            _.bindAll(this, "render");
+        },
+        render: function() {
+            log('Toolbar - render');
+            if (this.toolBar == null){
+                if (this.options.buttons != null){
+                    var eventsMgr = this.options.eventsMgr;
+                    $.each(this.options.buttons, function(index, btn){
+                        if (btn.hasOwnProperty('selector') &&
+                            btn.hasOwnProperty('icon')){
+                            $( btn.selector ).button({
+                                    text: false,
+                                    icons: {
+                                        primary: btn.icon
+                                    }
+                            }).click(function(){
+                                if (btn.hasOwnProperty('name')){
+                                    if (eventsMgr != null){
+                                        eventsMgr.trigger(btn.name);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            return this;
+        }
+    });
+}).call(this);
